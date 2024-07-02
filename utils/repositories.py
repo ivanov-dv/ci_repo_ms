@@ -87,8 +87,6 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         :return: Экземпляр RequestRepository
         """
 
-        # self._add_in_repo(user_id, request)
-
         if request in self.unique_user_requests:
             self.unique_user_requests[request].add(user_id)
             list_r = list(self.unique_user_requests.keys())

@@ -104,17 +104,18 @@ class PostgresDB:
             query = '''
                         INSERT INTO users_requests (request_id, user_id)
                         VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING
                     '''
             values = (request_id, user_id)
             self._try_transaction(cur, query, values)
 
-    def delete_request(self, request_id):
+    def delete_request(self, user_id, request_id):
         with self.conn.cursor() as cur:
             query = '''
-                        DELETE FROM requests
-                        WHERE request_id = %s
+                        DELETE FROM users_requests
+                        WHERE request_id = %s AND user_id = %s
                     '''
-            values = (request_id,)
+            values = (request_id, user_id)
             self._try_transaction(cur, query, values)
 
     def add_user(self, user_id, firstname, surname, username, date_registration, date_update):

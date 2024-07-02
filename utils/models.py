@@ -121,7 +121,7 @@ class TimeInfo:
 @dataclass
 class BaseRequest:
     request_id: int = field(
-        default_factory=lambda: int(time.time() * 100000),
+        default_factory=lambda: int(time.time() * 10**9),
         init=False
     )
 

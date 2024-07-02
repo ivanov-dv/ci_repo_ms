@@ -1,12 +1,25 @@
 import pytest
+import redis
 
-import config
 from utils.db import *
 from utils.repositories import *
 
 '''
 CONFIG
 '''
+postgres_db = PostgresDB(
+    dbname=config.POSTGRESQL_DB_TEST,
+    user=config.POSTGRESQL_USER_TEST,
+    password=config.POSTGRESQL_PASSWORD_TEST,
+    host=config.POSTGRESQL_HOST_TEST,
+    port=config.POSTGRESQL_PORT_TEST
+)
+
+redis_db = redis.Redis(
+    host=config.REDIS_HOST,
+    port=config.REDIS_HOST,
+    db=config.REDIS_DB
+)
 
 
 class TestRequest:
@@ -52,7 +65,11 @@ class TestRequest:
 
 
 class TestRequestRepository:
-    request_repo = RequestRepository('db', 'db')
+    request_repo = RequestRepository(redis_db, postgres_db)
+    pg_db = postgres_db
+
+    pg_db._drop_tables()
+    pg_db.initialize_tables()
 
     user_request1 = UserRequest(Symbol('btcusdt'), PercentOfTime(23, Period.v_24h), Way.up_to)
     user_request2 = UserRequest(Symbol('btcusdt'), PercentOfTime(23, Period.v_24h), Way.up_to)
@@ -62,7 +79,11 @@ class TestRequestRepository:
     user_request6 = UserRequest(Symbol('btcusdt'), Price(68000), Way.down_to)
     user_request7 = UserRequest(Symbol('ETHUsdt'), PercentOfTime(23, Period.v_24h), Way.up_to)
 
-    def test_add_without_db(self):
+    def test_add(self):
+        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', dt.utcnow(), dt.utcnow())
+        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', dt.utcnow(), dt.utcnow())
+        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', dt.utcnow(), dt.utcnow())
+
         self.request_repo.user_requests = {}
         self.request_repo.unique_user_requests = {}
 
@@ -123,63 +144,57 @@ class TestRequestRepository:
 
 
 class TestUserRepository:
-    user_repo = UserRepository('db', 'db')
+    user_repo = UserRepository(redis_db, postgres_db)
 
     def test_add_without_db(self):
         pass
 
 
 class TestDB:
-    postgres_db = PostgresDB(
-        config.POSTGRESQL_DB_TEST,
-        config.POSTGRESQL_USER_TEST,
-        config.POSTGRESQL_PASSWORD_TEST,
-        config.POSTGRESQL_HOST_TEST,
-        config.POSTGRESQL_PORT_TEST
-    )
+    pg_db = postgres_db
     dt = datetime.datetime(2024, 7, 1, 12, 54, 26, 164025)
 
     def test_initialize_db(self):
-        self.postgres_db._drop_tables()
-        self.postgres_db.initialize_tables()
-        assert self.postgres_db._is_table_exists('users')
-        assert self.postgres_db._is_table_exists('users_requests')
-        assert self.postgres_db._is_table_exists('requests')
+        self.pg_db._drop_tables()
+        self.pg_db.initialize_tables()
+        assert self.pg_db._is_table_exists('users')
+        assert self.pg_db._is_table_exists('users_requests')
+        assert self.pg_db._is_table_exists('requests')
 
     def test_add_user(self):
-        self.postgres_db.initialize_tables()
+        self.pg_db.initialize_tables()
 
-        self.postgres_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt)
-        self.postgres_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt)
-        self.postgres_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
+        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt)
+        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt)
+        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
 
         with pytest.raises(Exception, match='Ошибка выполнения запроса в БД'):
-            self.postgres_db.add_user(2, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
+            self.pg_db.add_user(2, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
 
-        assert self.postgres_db.get_user(1) == (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False)
-        assert self.postgres_db.get_user(2) == (2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt, False)
-        assert self.postgres_db.get_user(3) == (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)
+        assert self.pg_db.get_user(1) == (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False)
+        assert self.pg_db.get_user(2) == (2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt, False)
+        assert self.pg_db.get_user(3) == (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)
 
         all_users = [
             (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False),
             (2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt, False),
             (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)]
-        assert self.postgres_db.get_all_users() == all_users
+        assert self.pg_db.get_all_users() == all_users
 
     def test_update_and_get_user(self):
-        self.postgres_db.initialize_tables()
-        self.postgres_db.update_user(2, firstname='alexey', ban=True)
-        dt_upd = self.postgres_db.get_user(2)[5]
+        self.pg_db.initialize_tables()
+        self.pg_db.update_user(2, firstname='alexey', ban=True)
+        dt_upd = self.pg_db.get_user(2)[5]
 
-        assert self.postgres_db.get_user(2) == (2, 'alexey', 'petrov', 'ivan_petrov', self.dt, dt_upd, True)
+        assert self.pg_db.get_user(2) == (2, 'alexey', 'petrov', 'ivan_petrov', self.dt, dt_upd, True)
 
     def test_delete_user(self):
-        self.postgres_db.initialize_tables()
-        self.postgres_db.delete_user(2)
+        self.pg_db.initialize_tables()
+        self.pg_db.delete_user(2)
 
         all_users = [
             (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False),
             (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)]
 
-        assert self.postgres_db.get_all_users() == all_users
+        assert self.pg_db.get_all_users() == all_users
 
