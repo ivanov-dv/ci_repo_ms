@@ -67,6 +67,7 @@ class TestRequest:
 class TestRequestRepository:
     request_repo = RequestRepository(redis_db, postgres_db)
     pg_db = postgres_db
+    dt = datetime.datetime(2024, 7, 1, 12, 54, 26, 164025)
 
     pg_db._drop_tables()
     pg_db.initialize_tables()
@@ -80,9 +81,9 @@ class TestRequestRepository:
     user_request7 = UserRequest(Symbol('ETHUsdt'), PercentOfTime(23, Period.v_24h), Way.up_to)
 
     def test_add(self):
-        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', dt.utcnow(), dt.utcnow())
-        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', dt.utcnow(), dt.utcnow())
-        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', dt.utcnow(), dt.utcnow())
+        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt)
+        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt)
+        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
 
         self.request_repo.user_requests = {}
         self.request_repo.unique_user_requests = {}
@@ -118,7 +119,7 @@ class TestRequestRepository:
         assert self.request_repo.unique_user_requests == res_unique
         assert self.request_repo.get(1, self.user_request1) == self.user_request1
         assert self.request_repo.get(1, self.user_request7) is None
-        assert self.request_repo.get_all_for_user_id(2) == res_user_requests[2]
+        assert self.request_repo.get_all_requests_for_user_id(2) == res_user_requests[2]
         assert (self.request_repo.get(1, self.user_request2).request_id ==
                 self.request_repo.get(2, self.user_request2).request_id)
         assert (self.request_repo.get(2, self.user_request2).request_id !=
@@ -141,6 +142,23 @@ class TestRequestRepository:
 
         assert self.request_repo.user_requests == res_user_requests_delete
         assert self.request_repo.unique_user_requests == res_unique_delete
+
+    def test_get(self):
+        assert self.request_repo.get(1, self.user_request4) == self.user_request4
+
+    def test_get_all_requests_for_user_id(self):
+        self.request_repo.add(1, self.user_request1)
+        assert len(self.request_repo.get_all_requests_for_user_id(1)) == 3
+        self.request_repo.delete(1, self.user_request1)
+        assert len(self.request_repo.get_all_requests_for_user_id(1)) == 2
+
+    def test_get_all_users_for_request(self):
+        assert self.request_repo.get_all_users_for_request(self.user_request4) == {1}
+        self.request_repo.add(2, self.user_request4)
+        self.request_repo.add(3, self.user_request4)
+        assert self.request_repo.get_all_users_for_request(self.user_request4) == {1, 2, 3}
+        self.request_repo.delete(2, self.user_request4)
+        assert self.request_repo.get_all_users_for_request(self.user_request4) == {1, 3}
 
 
 class TestUserRepository:

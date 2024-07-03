@@ -57,6 +57,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         if request in self.unique_user_requests:
             self.unique_user_requests[request].discard(user_id)
             if not self.unique_user_requests[request]:
+                self.postgres_db.delete_request(request.request_id)
                 self.unique_user_requests.pop(request, None)
 
     def _do_unique_requests_for_server(self) -> set[RequestForServer]:
@@ -110,6 +111,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
 
         if user_id in self.user_requests:
             self.user_requests[user_id].discard(request)
+            self.postgres_db.delete_request_for_user(user_id, request.request_id)
             if not self.user_requests[user_id]:
                 self.user_requests.pop(user_id, None)
         self._delete_unique_user_request(user_id, request)
@@ -119,10 +121,10 @@ class RequestRepository(RepositoryDB, PatternSingleton):
     def get(self, user_id: int, request: UserRequest) -> UserRequest | None:
         return request if user_id in self.user_requests and request in self.user_requests[user_id] else None
 
-    def get_all_for_user_id(self, user_id: int) -> set[UserRequest] | None:
+    def get_all_requests_for_user_id(self, user_id: int) -> set[UserRequest] | None:
         return self.user_requests[user_id] if user_id in self.user_requests else None
 
-    def get_all_for_request(self, request: UserRequest) -> set[int] | None:
+    def get_all_users_for_request(self, request: UserRequest) -> set[int] | None:
         return self.unique_user_requests[request] if request in self.unique_user_requests else None
 
     def update_time_request(self, user_id: int, request: UserRequest) -> Self:

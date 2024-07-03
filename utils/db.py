@@ -86,12 +86,14 @@ class PostgresDB:
             query1 = '''
                         INSERT INTO requests (request_id, request_data)
                         VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING
                     '''
             values1 = (request_id, psycopg2.Binary(request_data))
             self._try_transaction(cur, query1, values1)
             query2 = '''
                         INSERT INTO users_requests (request_id, user_id)
-                        VALUES (%s, %s);
+                        VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING;
                         UPDATE requests
                         SET status_add_new = True
                         WHERE request_id = %s
@@ -109,13 +111,22 @@ class PostgresDB:
             values = (request_id, user_id)
             self._try_transaction(cur, query, values)
 
-    def delete_request(self, user_id, request_id):
+    def delete_request_for_user(self, user_id, request_id):
         with self.conn.cursor() as cur:
             query = '''
                         DELETE FROM users_requests
                         WHERE request_id = %s AND user_id = %s
                     '''
             values = (request_id, user_id)
+            self._try_transaction(cur, query, values)
+
+    def delete_request(self, request_id):
+        with self.conn.cursor() as cur:
+            query = '''
+                        DELETE FROM requests
+                        WHERE request_id = %s
+                    '''
+            values = (request_id,)
             self._try_transaction(cur, query, values)
 
     def add_user(self, user_id, firstname, surname, username, date_registration, date_update):
