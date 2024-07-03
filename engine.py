@@ -27,11 +27,12 @@ app = FastAPI()
 PREPARING
 '''
 users_repo.load_users_from_db()
+request_repo.load_requests_from_db()
 
 
 from utils.models import *
 from pprint import pprint
-#
+
 # request_repo.add(1, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))
 # request_repo.add(2, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))
 # request_repo.add(3, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))

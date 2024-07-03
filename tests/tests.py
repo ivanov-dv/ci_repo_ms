@@ -109,14 +109,18 @@ class TestRequestRepository:
                 UserRequest(Symbol('btcusdt'), Price(69000), Way.up_to)}
         }
         res_unique = {
-            UserRequest(Symbol('btcusdt'), PercentOfTime(23, Period.v_24h), Way.up_to): {1, 2},
-            UserRequest(Symbol('btcusdt'), PercentOfPoint(23, 70000), Way.up_to): {1},
-            UserRequest(Symbol('ethusdt'), PercentOfPoint(23, 70000), Way.up_to): {1, 2},
-            UserRequest(Symbol('btcusdt'), Price(69000), Way.up_to): {1, 2},
-            UserRequest(Symbol('btcusdt'), Price(68000), Way.down_to): {1}
+            UniqueUserRequest(UserRequest(Symbol('btcusdt'), PercentOfTime(23, Period.v_24h), Way.up_to)): {1, 2},
+            UniqueUserRequest(UserRequest(Symbol('btcusdt'), PercentOfPoint(23, 70000), Way.up_to)): {1},
+            UniqueUserRequest(UserRequest(Symbol('ethusdt'), PercentOfPoint(23, 70000), Way.up_to)): {1, 2},
+            UniqueUserRequest(UserRequest(Symbol('btcusdt'), Price(69000), Way.up_to)): {1, 2},
+            UniqueUserRequest(UserRequest(Symbol('btcusdt'), Price(68000), Way.down_to)): {1}
         }
         assert self.request_repo.user_requests == res_user_requests
         assert self.request_repo.unique_user_requests == res_unique
+        assert ({r.request_id for r in self.request_repo.unique_user_requests.keys()} ==
+                {r.request_id for sets in self.request_repo.user_requests.values() for r in sets})
+        assert {r.request_id for r in self.request_repo.unique_user_requests.keys()} is not None
+        assert {r.request_id for sets in self.request_repo.user_requests.values() for r in sets} is not None
         assert self.request_repo.get(1, self.user_request1) == self.user_request1
         assert self.request_repo.get(1, self.user_request7) is None
         assert self.request_repo.get_all_requests_for_user_id(2) == res_user_requests[2]
@@ -136,8 +140,8 @@ class TestRequestRepository:
             1: {self.user_request4, self.user_request6}
         }
         res_unique_delete = {
-            UserRequest(Symbol('ethusdt'), PercentOfPoint(23, 70000), Way.up_to): {1},
-            UserRequest(Symbol('btcusdt'), Price(68000), Way.down_to): {1}
+            UniqueUserRequest(UserRequest(Symbol('ethusdt'), PercentOfPoint(23, 70000), Way.up_to)): {1},
+            UniqueUserRequest(UserRequest(Symbol('btcusdt'), Price(68000), Way.down_to)): {1}
         }
 
         assert self.request_repo.user_requests == res_user_requests_delete

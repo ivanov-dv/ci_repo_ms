@@ -16,16 +16,16 @@ async def check_user(request: Request, call_next):
 
 @app.get("/get_user/{user_id}")
 async def get_user(user_id: int):
-    user = users_repo.get_user(user_id).to_dict()
+    user = users_repo.get_user(user_id)
     if user is None:
         return {"error": "user not found"}
-    return user
+    return user.to_dict()
 
 
 @app.get("/get_all_users/")
 async def get_all_users():
     users = users_repo.get_all_users()
-    return {user_id: user.to_dict() for user_id, user in users}
+    return {user_id: user.to_dict() for user_id, user in users.items()}
 
 
 @app.post("/add_user/")
@@ -41,11 +41,11 @@ async def delete_user(user_id: int):
     return {f"{user_id}": "deleted"}
 
 
-@app.post("/update_user/{user_id}")
-async def update_user(user_id: int, data: dict):
-    user = User(data["user_id"], data["name"], data["surname"], data["username"])
+@app.post("/update_user/")
+async def update_user(data: dict):
+    user = User(data["user_id"], data["firstname"], data["surname"], data["username"], ban=data["ban"])
     users_repo.update_user(user)
-    return {f"{user_id}": "updated"}
+    return {f"{data['user_id']}": "updated"}
 
 
 @app.get("/user_requests/")

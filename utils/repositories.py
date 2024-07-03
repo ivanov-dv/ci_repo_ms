@@ -12,7 +12,7 @@ class UserRepository(RepositoryDB, PatternSingleton):
     def add_user(self, user: User):
         self.postgres_db.add_user(
             user.user_id,
-            user.name,
+            user.firstname,
             user.surname,
             user.username,
             user.date_registration,
@@ -36,7 +36,7 @@ class UserRepository(RepositoryDB, PatternSingleton):
 
     def update_user(self, user: User) -> None:
         if self.users.get(user.user_id, None):
-            self.postgres_db.update_user(user.user_id, firstname=user.name, surname=user.surname,
+            self.postgres_db.update_user(user.user_id, firstname=user.firstname, surname=user.surname,
                                          username=user.username, ban=user.ban)
             self.users[user.user_id] = user
 
@@ -48,15 +48,15 @@ class UserRepository(RepositoryDB, PatternSingleton):
 
 class RequestRepository(RepositoryDB, PatternSingleton):
     user_requests: dict[int, set[UserRequest]] = {}
-    unique_user_requests: dict[UserRequest, set[int]] = {}
+    unique_user_requests: dict[UniqueUserRequest, set[int]] = {}
     unique_requests_for_server: set[RequestForServer] = set()
     requests_weight: int = 0
 
     def _delete_unique_user_request(self, user_id: int, request: UserRequest) -> None:
-        if request in self.unique_user_requests:
-            self.unique_user_requests[request].discard(user_id)
-            if not self.unique_user_requests[request]:
-                self.unique_user_requests.pop(request, None)
+        if UniqueUserRequest(request) in self.unique_user_requests:
+            self.unique_user_requests[UniqueUserRequest(request)].discard(user_id)
+            if not self.unique_user_requests[UniqueUserRequest(request)]:
+                self.unique_user_requests.pop(UniqueUserRequest(request), None)
 
     def _do_unique_requests_for_server(self) -> set[RequestForServer]:
         """
@@ -86,10 +86,10 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         :return: Экземпляр RequestRepository
         """
 
-        if request in self.unique_user_requests:
-            self.unique_user_requests[request].add(user_id)
+        if UniqueUserRequest(request) in self.unique_user_requests:
+            self.unique_user_requests[UniqueUserRequest(request)].add(user_id)
             list_r = list(self.unique_user_requests.keys())
-            i = list_r.index(request)
+            i = list_r.index(UniqueUserRequest(request))
             id_old_request = list_r[i].request_id
             request.request_id = id_old_request
             pickle_dumps = pickle.dumps(request)
@@ -97,7 +97,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         else:
             pickle_dumps = pickle.dumps(request)
             self.postgres_db.add_new_request(user_id, request.request_id, pickle_dumps)
-            self.unique_user_requests.update({request: {user_id}})
+            self.unique_user_requests.update({UniqueUserRequest(request): {user_id}})
 
         if user_id in self.user_requests:
             self.user_requests[user_id].add(request)
@@ -130,7 +130,8 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         return self.user_requests[user_id] if user_id in self.user_requests else None
 
     def get_all_users_for_request(self, request: UserRequest) -> set[int] | None:
-        return self.unique_user_requests[request] if request in self.unique_user_requests else None
+        u_req = UniqueUserRequest(request)
+        return self.unique_user_requests[u_req] if u_req in self.unique_user_requests else None
 
     def update_time_request(self, user_id: int, request: UserRequest) -> Self:
         """
@@ -144,17 +145,8 @@ class RequestRepository(RepositoryDB, PatternSingleton):
 
         return self
 
-    def to_dict_user_requests(self) -> dict:
-        res = {}
-        for user_id, user_requests in self.user_requests.items():
-            reqs = []
-            for request in user_requests:
-                reqs.append(request.to_dict())
-            res.update({user_id: reqs})
-        return res
-
     def to_list_unique_user_requests(self) -> list:
-        res = [req.to_dict() for req in self.unique_user_requests.keys()]
+        res = [req.to_dict(users) for req, users in self.unique_user_requests.items()]
         return res
 
     def to_list_unique_requests_for_server(self) -> list:
@@ -166,11 +158,10 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         all_requests = self.postgres_db.get_all_requests()
         for r_data in all_requests:
             request_id, request, user_id = r_data[0], pickle.loads(r_data[1]), r_data[2]
-            print(request_id, request, user_id)
             if request in self.unique_user_requests:
-                self.unique_user_requests[request].add(user_id)
+                self.unique_user_requests[UniqueUserRequest(request)].add(user_id)
             else:
-                self.unique_user_requests.update({request: {user_id}})
+                self.unique_user_requests.update({UniqueUserRequest(request): {user_id}})
 
             if user_id in self.user_requests:
                 self.user_requests[user_id].add(request)

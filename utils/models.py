@@ -29,7 +29,7 @@ class Way(enum.Enum):
 @dataclass(order=False, eq=False)
 class User:
     user_id: int
-    name: str
+    firstname: str
     surname: str
     username: str
     date_registration: datetime.datetime = dt.utcnow()
@@ -50,11 +50,11 @@ class User:
     def to_dict(self):
         return {
             'user_id': self.user_id,
-            'name': self.name,
+            'firstname': self.firstname,
             'surname': self.surname,
             'username': self.username,
-            'date_registration': self.date_registration,
-            'date_update': self.date_update,
+            'date_registration': repr(self.date_registration),
+            'date_update': repr(self.date_update),
             'ban': self.ban
         }
 
@@ -213,17 +213,18 @@ class UserRequest(BaseRequest):
 
 class UniqueUserRequest(BaseRequest):
     def __init__(self, user_request: UserRequest):
-        super().__init__()
+        self.request_id = user_request.request_id
         self.symbol = user_request.symbol
         self.data_request = user_request.data_request
         self.way = user_request.way
 
     def __repr__(self):
-        return f'{self.symbol} {self.data_request} {self.way}'
+        return f'UniqueUserRequest({self.request_id}, {self.symbol}, {self.data_request}, {self.way})'
 
     def __eq__(self, other):
         if isinstance(other, UniqueUserRequest):
-            return (self.symbol, self.data_request, self.way) == (other.symbol, other.data_request, other.way)
+            return ((self.symbol, self.data_request, self.way) ==
+                    (other.symbol, other.data_request, other.way))
         return False
 
     def __ne__(self, other):
@@ -231,6 +232,15 @@ class UniqueUserRequest(BaseRequest):
 
     def __hash__(self):
         return hash((self.symbol, self.data_request, self.way))
+
+    def to_dict(self, users: set):
+        return {
+            'id': self.request_id,
+            'symbol': self.symbol.symbol,
+            'way': self.way.value,
+            'data_request': self.data_request.to_dict(),
+            'users': list(users)
+        }
 
 
 class RequestForServer(BaseRequest):
