@@ -176,8 +176,7 @@ class TestDB:
         self.pg_db._drop_tables()
         self.pg_db.initialize_tables()
         assert self.pg_db._is_table_exists('users')
-        assert self.pg_db._is_table_exists('users_requests')
-        assert self.pg_db._is_table_exists('requests')
+        assert self.pg_db._is_table_exists('user_requests')
 
     def test_add_user(self):
         self.pg_db.initialize_tables()

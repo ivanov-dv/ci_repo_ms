@@ -56,7 +56,6 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         if request in self.unique_user_requests:
             self.unique_user_requests[request].discard(user_id)
             if not self.unique_user_requests[request]:
-                self.postgres_db.delete_request(request.request_id)
                 self.unique_user_requests.pop(request, None)
 
     def _do_unique_requests_for_server(self) -> set[RequestForServer]:
@@ -93,9 +92,10 @@ class RequestRepository(RepositoryDB, PatternSingleton):
             i = list_r.index(request)
             id_old_request = list_r[i].request_id
             request.request_id = id_old_request
-            self.postgres_db.add_request_to_user(request.request_id, user_id)
+            pickle_dumps = pickle.dumps(request)
+            self.postgres_db.add_new_request(user_id, request.request_id, pickle_dumps)
         else:
-            pickle_dumps = pickle.dumps(self.unique_user_requests)
+            pickle_dumps = pickle.dumps(request)
             self.postgres_db.add_new_request(user_id, request.request_id, pickle_dumps)
             self.unique_user_requests.update({request: {user_id}})
 
@@ -107,10 +107,16 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         return self
 
     def delete(self, user_id: int, request: UserRequest) -> Self:
+        """
+        Удаляет запрос конкретного пользователя из репозитория и БД.
+
+        :param user_id: ID пользователя
+        :param request: Запрос пользователя
+        """
 
         if user_id in self.user_requests:
-            self.user_requests[user_id].discard(request)
             self.postgres_db.delete_request_for_user(user_id, request.request_id)
+            self.user_requests[user_id].discard(request)
             if not self.user_requests[user_id]:
                 self.user_requests.pop(user_id, None)
         self._delete_unique_user_request(user_id, request)
@@ -155,3 +161,18 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         self._do_unique_requests_for_server()
         res = [req.to_dict() for req in self.unique_requests_for_server]
         return res
+
+    def load_requests_from_db(self) -> None:
+        all_requests = self.postgres_db.get_all_requests()
+        for r_data in all_requests:
+            request_id, request, user_id = r_data[0], pickle.loads(r_data[1]), r_data[2]
+            print(request_id, request, user_id)
+            if request in self.unique_user_requests:
+                self.unique_user_requests[request].add(user_id)
+            else:
+                self.unique_user_requests.update({request: {user_id}})
+
+            if user_id in self.user_requests:
+                self.user_requests[user_id].add(request)
+            else:
+                self.user_requests.update({user_id: {request}})
