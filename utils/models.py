@@ -211,6 +211,28 @@ class UserRequest(BaseRequest):
         )
 
 
+class UniqueUserRequest(BaseRequest):
+    def __init__(self, user_request: UserRequest):
+        super().__init__()
+        self.symbol = user_request.symbol
+        self.data_request = user_request.data_request
+        self.way = user_request.way
+
+    def __repr__(self):
+        return f'{self.symbol} {self.data_request} {self.way}'
+
+    def __eq__(self, other):
+        if isinstance(other, UniqueUserRequest):
+            return (self.symbol, self.data_request, self.way) == (other.symbol, other.data_request, other.way)
+        return False
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash((self.symbol, self.data_request, self.way))
+
+
 class RequestForServer(BaseRequest):
     """
     В данном классе реализовано сравнение экземпляров запросов,

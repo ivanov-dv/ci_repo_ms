@@ -31,7 +31,7 @@ class PostgresDB:
     def _drop_tables(self):
         with self.conn.cursor() as cur:
             query = '''
-            DROP TABLE IF EXISTS users, requests, users_requests;
+            DROP TABLE IF EXISTS users, user_requests;
             '''
             cur.execute(query)
             self.conn.commit()
@@ -64,18 +64,12 @@ class PostgresDB:
                         ban boolean DEFAULT False,
                         PRIMARY KEY (user_id)
                     );
-                    CREATE TABLE IF NOT EXISTS requests 
+                    CREATE TABLE IF NOT EXISTS user_requests 
                     (
                         request_id bigint,
                         request_data bytea,
-                        status_add_new boolean DEFAULT False,
-                        PRIMARY KEY (request_id)
-                    );
-                    CREATE TABLE IF NOT EXISTS users_requests
-                    (
-                        request_id bigint REFERENCES requests (request_id) ON UPDATE CASCADE,
                         user_id bigint REFERENCES users (user_id) ON UPDATE CASCADE,
-                        CONSTRAINT users_requests_pkey PRIMARY KEY (request_id, user_id)
+                        CONSTRAINT user_requests_pkey PRIMARY KEY (request_id, user_id)
                     );
                 """
             )
@@ -83,51 +77,39 @@ class PostgresDB:
 
     def add_new_request(self, user_id, request_id, request_data):
         with self.conn.cursor() as cur:
-            query1 = '''
-                        INSERT INTO requests (request_id, request_data)
-                        VALUES (%s, %s)
-                        ON CONFLICT DO NOTHING
-                    '''
-            values1 = (request_id, psycopg2.Binary(request_data))
-            self._try_transaction(cur, query1, values1)
-            query2 = '''
-                        INSERT INTO users_requests (request_id, user_id)
-                        VALUES (%s, %s)
-                        ON CONFLICT DO NOTHING;
-                        UPDATE requests
-                        SET status_add_new = True
-                        WHERE request_id = %s
-                    '''
-            values2 = (request_id, user_id, request_id)
-            self._try_transaction(cur, query2, values2)
-
-    def add_request_to_user(self, request_id, user_id):
-        with self.conn.cursor() as cur:
             query = '''
-                        INSERT INTO users_requests (request_id, user_id)
-                        VALUES (%s, %s)
+                        INSERT INTO user_requests (request_id, request_data, user_id)
+                        VALUES (%s, %s, %s)
                         ON CONFLICT DO NOTHING
                     '''
-            values = (request_id, user_id)
+            values = (request_id, psycopg2.Binary(request_data), user_id)
             self._try_transaction(cur, query, values)
 
     def delete_request_for_user(self, user_id, request_id):
         with self.conn.cursor() as cur:
             query = '''
-                        DELETE FROM users_requests
+                        DELETE FROM user_requests
                         WHERE request_id = %s AND user_id = %s
                     '''
             values = (request_id, user_id)
             self._try_transaction(cur, query, values)
 
-    def delete_request(self, request_id):
+    def delete_request_for_all_users(self, request_id):
         with self.conn.cursor() as cur:
             query = '''
-                        DELETE FROM requests
+                        DELETE FROM user_requests
                         WHERE request_id = %s
                     '''
             values = (request_id,)
             self._try_transaction(cur, query, values)
+
+    def get_all_requests(self):
+        with self.conn.cursor() as cur:
+            query = '''
+                        SELECT * FROM user_requests
+                    '''
+            cur.execute(query)
+            return cur.fetchall()
 
     def add_user(self, user_id, firstname, surname, username, date_registration, date_update):
         with self.conn.cursor() as cur:
