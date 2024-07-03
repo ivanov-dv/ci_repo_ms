@@ -170,6 +170,31 @@ class UserRequest(BaseRequest):
 
     @classmethod
     def from_dict(cls, data):
+        """
+        Создаёт экземпляр класса UserRequest из словаря.
+        Пример:
+        {
+            "symbol": "BTCUSDT",
+            "way": "up_to",
+            "type": "percent_of_point",
+            "target_percent": 10,
+            "current_price": 123.45
+        }
+        {
+            "symbol": "BTCUSDT",
+            "way": "down_to",
+            "type": "percent_of_time",
+            "target_percent": 10,
+            "period": "24h"
+        }
+        {
+            "symbol": "BTCUSDT",
+            "way": "down_to",
+            "type": "price",
+            "target_price": 69800.56
+        }
+        """
+
         res = None
         data_request = data['data_request']
         if data_request['type'] == 'percent_of_point':
@@ -178,6 +203,7 @@ class UserRequest(BaseRequest):
             res = PercentOfTime(data_request['target_percent'], Period(data_request['period']))
         if data_request['type'] == 'price':
             res = Price(data_request['target_price'])
+
         return cls(
             symbol=Symbol(data['symbol']),
             data_request=res,

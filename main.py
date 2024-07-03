@@ -1,7 +1,7 @@
 from fastapi import Request
 
 from engine import request_repo, users_repo, app
-from utils.models import User
+from utils.models import User, UserRequest
 
 
 @app.middleware("http")
@@ -43,7 +43,9 @@ async def delete_user(user_id: int):
 
 @app.post("/update_user/{user_id}")
 async def update_user(user_id: int, data: dict):
-    return {"item_id": "pass"}
+    user = User(data["user_id"], data["name"], data["surname"], data["username"])
+    users_repo.update_user(user)
+    return {f"{user_id}": "updated"}
 
 
 @app.get("/user_requests/")
@@ -61,6 +63,7 @@ async def get_all_requests_for_server():
     return request_repo.to_list_unique_requests_for_server()
 
 
-@app.post("/requests/")
+@app.post("/add_request/")
 async def add_request(data: dict):
-    pass
+    user_request = UserRequest.from_dict(data)
+    return {f"{user_request.request_id}": f"{user_request.to_dict()}"}
