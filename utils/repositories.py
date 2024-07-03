@@ -1,4 +1,3 @@
-import logging
 import pickle
 
 from typing_extensions import Self
@@ -32,8 +31,8 @@ class UserRepository(RepositoryDB, PatternSingleton):
     def get_all_users_id(self) -> set[int]:
         return set(self.users.keys())
 
-    def get_all_users(self) -> set[User]:
-        return set(self.users.values())
+    def get_all_users(self) -> dict[int, User]:
+        return self.users
 
     def update_user(self, user: User) -> None:
         if self.users.get(user.user_id, None):

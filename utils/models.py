@@ -47,6 +47,17 @@ class User:
     def __hash__(self):
         return hash(self.user_id)
 
+    def to_dict(self):
+        return {
+            'user_id': self.user_id,
+            'name': self.name,
+            'surname': self.surname,
+            'username': self.username,
+            'date_registration': self.date_registration,
+            'date_update': self.date_update,
+            'ban': self.ban
+        }
+
 
 @dataclass(repr=False, eq=False, order=False)
 class Symbol:

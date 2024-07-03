@@ -1,6 +1,7 @@
 from fastapi import Request
 
-from engine import request_repo, app
+from engine import request_repo, users_repo, app
+from utils.models import User
 
 
 @app.middleware("http")
@@ -15,22 +16,29 @@ async def check_user(request: Request, call_next):
 
 @app.get("/get_user/{user_id}")
 async def get_user(user_id: int):
-    return {"item_id": "pass"}
+    user = users_repo.get_user(user_id).to_dict()
+    if user is None:
+        return {"error": "user not found"}
+    return user
 
 
 @app.get("/get_all_users/")
 async def get_all_users():
-    return {"item_id": "pass"}
+    users = users_repo.get_all_users()
+    return {user_id: user.to_dict() for user_id, user in users}
 
 
 @app.post("/add_user/")
 async def add_user(data: dict):
-    return {"item_id": "pass"}
+    user = User(data["user_id"], data["name"], data["surname"], data["username"])
+    users_repo.add_user(user)
+    return {f"{user.user_id}": f"{user.to_dict()}"}
 
 
 @app.delete("/delete_user/{user_id}")
 async def delete_user(user_id: int):
-    return {"item_id": "pass"}
+    users_repo.delete_user(user_id)
+    return {f"{user_id}": "deleted"}
 
 
 @app.post("/update_user/{user_id}")
