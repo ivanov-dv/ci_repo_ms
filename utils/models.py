@@ -2,8 +2,8 @@ import datetime
 import enum
 import time
 
-from dataclasses import dataclass, field
 from datetime import datetime as dt
+from pydantic import BaseModel, ConfigDict, Field
 
 import config
 
@@ -26,15 +26,32 @@ class Way(enum.Enum):
     all = 'all'
 
 
-@dataclass(order=False, eq=False)
-class User:
+class TimeInfo(BaseModel):
+    create_time: datetime.datetime = dt.utcnow()
+    update_time: datetime.datetime = None
+    create_time_unix: float = time.time()
+    update_time_unix: float = None
+
+    def __init__(self):
+        super(TimeInfo, self).__init__()
+        self.update_time = self.create_time
+        self.update_time_unix = self.create_time_unix
+
+
+class User(BaseModel):
     user_id: int
     firstname: str
     surname: str
     username: str
-    date_registration: datetime.datetime = dt.utcnow()
-    date_update: datetime.datetime = dt.utcnow()
+    time_info: TimeInfo = Field(default_factory=TimeInfo)
     ban: bool = False
+
+    def __init__(self, user_id: int, firstname: str, surname: str, username: str,
+                 time_info: TimeInfo, ban: bool = False):
+        super(User, self).__init__(user_id=user_id, firstname=firstname, surname=surname, username=username)
+        self.time_info = time_info
+        self.ban = ban
+
 
     def __eq__(self, other):
         if isinstance(other, User):
@@ -47,26 +64,26 @@ class User:
     def __hash__(self):
         return hash(self.user_id)
 
-    def to_dict(self):
-        return {
-            'user_id': self.user_id,
-            'firstname': self.firstname,
-            'surname': self.surname,
-            'username': self.username,
-            'date_registration': repr(self.date_registration),
-            'date_update': repr(self.date_update),
-            'ban': self.ban
-        }
+    @classmethod
+    def load_user(cls, data):
+        time_info = TimeInfo()
+        time_info.create_time = data[4]
+        time_info.update_time = data[5]
+        time_info.create_time_unix = data[6]
+        time_info.update_time_unix = data[7]
+        return cls(data[0], data[1], data[2], data[3], time_info, data[8])
 
 
-@dataclass(repr=False, eq=False, order=False)
-class Symbol:
+class Symbol(BaseModel):
     symbol: str
 
-    def __post_init__(self):
-        self.symbol = self.symbol.upper()
+    def __init__(self, symbol: str):
+        super(Symbol, self).__init__(symbol=symbol.upper())
 
     def __repr__(self):
+        return f'Symbol(\'{self.symbol}\')'
+
+    def __str__(self):
         return self.symbol
 
     def __eq__(self, other):
@@ -85,69 +102,52 @@ class Symbol:
         return hash(self.symbol)
 
 
-@dataclass(frozen=True)
-class Percent:
+class PercentOfPoint(BaseModel):
     target_percent: float
-
-
-@dataclass(frozen=True)
-class PercentOfPoint(Percent):
     current_price: float
     weight: int = config.WEIGHT_REQUEST_KLINE
 
-    def to_dict(self):
-        return {'type': 'percent_of_point', 'target_percent': self.target_percent, 'current_price': self.current_price}
+    model_config = ConfigDict(frozen=True)
+
+    def __init__(self, target_percent: float, current_price: float):
+        super(PercentOfPoint, self).__init__(target_percent=target_percent, current_price=current_price)
 
 
-@dataclass(frozen=True)
-class PercentOfTime(Percent):
+class PercentOfTime(BaseModel):
+    target_percent: float
     period: Period
     weight: int = config.WEIGHT_GET_TICKER
 
-    def to_dict(self):
-        return {'type': 'percent_of_time', 'target_percent': self.target_percent, 'period': self.period.value}
+    model_config = ConfigDict(frozen=True)
+
+    def __init__(self, target_percent: float, period: Period):
+        super(PercentOfTime, self).__init__(target_percent=target_percent, period=period)
 
 
-@dataclass(frozen=True)
-class Price:
+class Price(BaseModel):
     target_price: float
     weight: int = config.WEIGHT_REQUEST_KLINE
 
-    def to_dict(self):
-        return {'type': 'price', 'target_price': self.target_price}
+    model_config = ConfigDict(frozen=True)
+
+    def __init__(self, target_price: float):
+        super(Price, self).__init__(target_price=target_price)
 
 
-@dataclass
-class TimeInfo:
-    create_time: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
-    update_time: datetime.datetime = None
-    create_time_unix: float = field(default_factory=time.time)
-    update_time_unix: float = None
-
-    def __post_init__(self):
-        self.update_time = self.create_time
-        self.update_time_unix = self.create_time_unix
-
-
-@dataclass
-class BaseRequest:
-    request_id: int = field(
-        default_factory=lambda: int(time.time() * 10**9),
-        init=False
-    )
-
-
-@dataclass(eq=False, order=False)
-class UserRequest(BaseRequest):
+class UserRequest(BaseModel):
     """
     Класс запросов пользователя.
     Сравнение экземпляров позволяет выявить дубли (время создания и обновления не учитывается).
     """
 
+    request_id: int = Field(default_factory=lambda: int(time.time() * 10**9))
     symbol: Symbol
     data_request: PercentOfTime | PercentOfPoint | Price
     way: Way
-    time_info: TimeInfo = field(default_factory=TimeInfo, init=False)
+    time_info: TimeInfo = Field(default_factory=TimeInfo)
+
+    def __init__(self, symbol: Symbol, data_request: PercentOfTime | PercentOfPoint | Price, way: Way):
+        super(UserRequest, self).__init__(symbol=symbol, data_request=data_request, way=way)
 
     def __eq__(self, other):
         if isinstance(other, UserRequest):
@@ -160,66 +160,16 @@ class UserRequest(BaseRequest):
     def __hash__(self):
         return hash((self.symbol, self.data_request, self.way))
 
-    def to_dict(self):
-        return {
-            'id': self.request_id,
-            'symbol': self.symbol.symbol,
-            'way': self.way.value,
-            'data_request': self.data_request.to_dict()
-        }
 
-    @classmethod
-    def from_dict(cls, data):
-        """
-        Создаёт экземпляр класса UserRequest из словаря.
-        Пример:
-        {
-            "symbol": "BTCUSDT",
-            "way": "up_to",
-            "type": "percent_of_point",
-            "target_percent": 10,
-            "current_price": 123.45
-        }
-        {
-            "symbol": "BTCUSDT",
-            "way": "down_to",
-            "type": "percent_of_time",
-            "target_percent": 10,
-            "period": "24h"
-        }
-        {
-            "symbol": "BTCUSDT",
-            "way": "down_to",
-            "type": "price",
-            "target_price": 69800.56
-        }
-        """
+class UniqueUserRequest(BaseModel):
+    request_id: int
+    symbol: Symbol
+    data_request: PercentOfTime | PercentOfPoint | Price
+    way: Way
 
-        res = None
-        data_request = data['data_request']
-        if data_request['type'] == 'percent_of_point':
-            res = PercentOfPoint(data_request['target_percent'], data_request['current_price'])
-        if data_request['type'] == 'percent_of_time':
-            res = PercentOfTime(data_request['target_percent'], Period(data_request['period']))
-        if data_request['type'] == 'price':
-            res = Price(data_request['target_price'])
-
-        return cls(
-            symbol=Symbol(data['symbol']),
-            data_request=res,
-            way=Way(data['way'])
-        )
-
-
-class UniqueUserRequest(BaseRequest):
     def __init__(self, user_request: UserRequest):
-        self.request_id = user_request.request_id
-        self.symbol = user_request.symbol
-        self.data_request = user_request.data_request
-        self.way = user_request.way
-
-    def __repr__(self):
-        return f'UniqueUserRequest({self.request_id}, {self.symbol}, {self.data_request}, {self.way})'
+        super(UniqueUserRequest, self).__init__(request_id=user_request.request_id, symbol=user_request.symbol,
+                                                data_request=user_request.data_request, way=user_request.way)
 
     def __eq__(self, other):
         if isinstance(other, UniqueUserRequest):
@@ -233,29 +183,13 @@ class UniqueUserRequest(BaseRequest):
     def __hash__(self):
         return hash((self.symbol, self.data_request, self.way))
 
-    def to_dict(self, users: set):
-        return {
-            'id': self.request_id,
-            'symbol': self.symbol.symbol,
-            'way': self.way.value,
-            'data_request': self.data_request.to_dict(),
-            'users': list(users)
-        }
 
-
-class RequestForServer(BaseRequest):
-    """
-    В данном классе реализовано сравнение экземпляров запросов,
-    которые позволяет сформировать уникальные запросы, поместив их в set().
-    """
+class RequestForServer(BaseModel):
+    symbol: Symbol
+    data_request: PercentOfTime | PercentOfPoint | Price
 
     def __init__(self, user_request: UserRequest):
-        super().__init__()
-        self.symbol = user_request.symbol
-        self.data_request = user_request.data_request
-
-    def __repr__(self):
-        return f'{self.symbol} {self.data_request}'
+        super(RequestForServer, self).__init__(symbol=user_request.symbol, data_request=user_request.data_request)
 
     def __eq__(self, other):
         if isinstance(other, RequestForServer):
@@ -272,68 +206,3 @@ class RequestForServer(BaseRequest):
 
     def __hash__(self):
         return hash(self.symbol)
-
-    def to_dict(self):
-        return {
-            'symbol': self.symbol.symbol,
-            'data_request': self.data_request.to_dict()
-        }
-
-
-class BaseResponse:
-    pass
-
-
-class ResponseKline(BaseResponse):
-    def __init__(
-            self,
-            open_time,
-            open_price,
-            high_price,
-            low_price,
-            close_price,
-            volume,
-            close_time,
-            quote_asset_volume,
-            number_of_trades,
-            taker_buy_base_asset_volume,
-            taker_buy_quote_asset_volume
-    ):
-        """
-        Первые 11 элементов списка из ответа сервера по запросу client.get_klines
-        """
-
-        self.open_time = open_time
-        self.open_price = open_price
-        self.high_price = high_price
-        self.low_price = low_price
-        self.close_price = close_price
-        self.volume = volume
-        self.close_time = close_time
-        self.quote_asset_volume = quote_asset_volume
-        self.number_of_trades = number_of_trades
-        self.taker_buy_base_asset_volume = taker_buy_base_asset_volume
-        self.taker_buy_quote_asset_volume = taker_buy_quote_asset_volume
-
-
-class ResponseGetTicker(BaseResponse):
-    def __init__(self, data_dict: dict):
-        """
-        Ответ сервера по запросу client.get_ticker
-        """
-
-        self.symbol = data_dict['symbol']
-        self.price_change = float(data_dict['priceChange'])
-        self.price_change_percent = float(data_dict['priceChangePercent'])
-        self.weighted_avg_price = float(data_dict['weightedAvgPrice'])
-        self.prev_close_price = float(data_dict['prevClosePrice'])
-        self.last_price = float(data_dict['lastPrice'])
-        self.bid_price = float(data_dict['bidPrice'])
-        self.ask_price = float(data_dict['askPrice'])
-        self.open_price = float(data_dict['openPrice'])
-        self.high_price = float(data_dict['highPrice'])
-        self.low_price = float(data_dict['lowPrice'])
-        self.volume = float(data_dict['volume'])
-        self.open_time = float(data_dict['openTime'])
-        self.close_time = float(data_dict['closeTime'])
-

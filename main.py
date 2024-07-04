@@ -1,4 +1,4 @@
-from fastapi import Request
+from fastapi import Request, HTTPException
 
 from engine import request_repo, users_repo, app
 from utils.models import User, UserRequest
@@ -29,10 +29,18 @@ async def get_all_users():
 
 
 @app.post("/add_user/")
-async def add_user(data: dict):
-    user = User(data["user_id"], data["name"], data["surname"], data["username"])
-    users_repo.add_user(user)
-    return {f"{user.user_id}": f"{user.to_dict()}"}
+async def add_user(user: User):
+    if user in users_repo.users:
+        users_repo.add_user(user)
+        return {f"{user.user_id}": f"{user.dict()}"}
+    else:
+        raise HTTPException(status_code=422, detail="User already exists")
+
+# @app.post("/add_user/")
+# async def add_user(data: dict):
+#     user = User(data["user_id"], data["name"], data["surname"], data["username"])
+#     users_repo.add_user(user)
+#     return {f"{user.user_id}": f"{user.to_dict()}"}
 
 
 @app.delete("/delete_user/{user_id}")
@@ -65,5 +73,9 @@ async def get_all_requests_for_server():
 
 @app.post("/add_request/")
 async def add_request(data: dict):
-    user_request = UserRequest.from_dict(data)
-    return {f"{user_request.request_id}": f"{user_request.to_dict()}"}
+    try:
+        user_request = UserRequest.from_dict(data)
+        request_repo.add(data['user_id'], user_request)
+        return {f"{user_request.request_id}": f"{user_request.to_dict()}"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=e)

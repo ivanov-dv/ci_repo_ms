@@ -43,7 +43,7 @@ class UserRepository(RepositoryDB, PatternSingleton):
     def load_users_from_db(self) -> None:
         users = self.postgres_db.get_all_users()
         for user in users:
-            self.users[user[0]] = User(user[0], user[1], user[2], user[3], user[4], user[5], user[6])
+            self.users[user[0]] = User.load_user(user)
 
 
 class RequestRepository(RepositoryDB, PatternSingleton):
@@ -146,12 +146,12 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         return self
 
     def to_list_unique_user_requests(self) -> list:
-        res = [req.to_dict(users) for req, users in self.unique_user_requests.items()]
+        res = [req.dict(users) for req, users in self.unique_user_requests.items()]
         return res
 
     def to_list_unique_requests_for_server(self) -> list:
         self._do_unique_requests_for_server()
-        res = [req.to_dict() for req in self.unique_requests_for_server]
+        res = [req.dict() for req in self.unique_requests_for_server]
         return res
 
     def load_requests_from_db(self) -> None:

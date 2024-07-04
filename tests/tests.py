@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 import redis
 
@@ -67,7 +69,7 @@ class TestRequest:
 class TestRequestRepository:
     request_repo = RequestRepository(redis_db, postgres_db)
     pg_db = postgres_db
-    dt = datetime.datetime(2024, 7, 1, 12, 54, 26, 164025)
+    time_info = TimeInfo()
 
     pg_db._drop_tables()
     pg_db.initialize_tables()
@@ -81,9 +83,9 @@ class TestRequestRepository:
     user_request7 = UserRequest(Symbol('ETHUsdt'), PercentOfTime(23, Period.v_24h), Way.up_to)
 
     def test_add(self):
-        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt)
-        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt)
-        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
+        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.time_info)
+        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.time_info)
+        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info)
 
         self.request_repo.user_requests = {}
         self.request_repo.unique_user_requests = {}
@@ -174,7 +176,10 @@ class TestUserRepository:
 
 class TestDB:
     pg_db = postgres_db
-    dt = datetime.datetime(2024, 7, 1, 12, 54, 26, 164025)
+    time_info = TimeInfo()
+    dt = datetime.datetime(2024, 7, 4, 14, 55, 6, 742449)
+    time_info.create_time_unix = 123
+    time_info.update_time_unix = 123
 
     def test_initialize_db(self):
         self.pg_db._drop_tables()
@@ -185,37 +190,39 @@ class TestDB:
     def test_add_user(self):
         self.pg_db.initialize_tables()
 
-        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt)
-        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt)
-        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
+        self.pg_db.add_user(1, 'sergey', 'ivanov', 'sergey_ivanov', self.time_info)
+        self.pg_db.add_user(2, 'ivan', 'petrov', 'ivan_petrov', self.time_info)
+        self.pg_db.add_user(3, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info)
 
         with pytest.raises(Exception, match='Ошибка выполнения запроса в БД'):
-            self.pg_db.add_user(2, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt)
+            self.pg_db.add_user(2, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info)
 
-        assert self.pg_db.get_user(1) == (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False)
-        assert self.pg_db.get_user(2) == (2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt, False)
-        assert self.pg_db.get_user(3) == (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)
+        assert (self.pg_db.get_user(1) ==
+                (1, 'sergey', 'ivanov', 'sergey_ivanov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False))
+        assert (self.pg_db.get_user(2) ==
+                (2, 'ivan', 'petrov', 'ivan_petrov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False))
+        assert (self.pg_db.get_user(3) ==
+                (3, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False))
 
         all_users = [
-            (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False),
-            (2, 'ivan', 'petrov', 'ivan_petrov', self.dt, self.dt, False),
-            (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)]
+            (1, 'sergey', 'ivanov', 'sergey_ivanov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False),
+            (2, 'ivan', 'petrov', 'ivan_petrov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False),
+            (3, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False)]
         assert self.pg_db.get_all_users() == all_users
 
     def test_update_and_get_user(self):
         self.pg_db.initialize_tables()
-        self.pg_db.update_user(2, firstname='alexey', ban=True)
-        dt_upd = self.pg_db.get_user(2)[5]
+        self.pg_db.update_user(2, firstname='alexey', ban=True, date_update=self.dt, time_update_unix=123)
 
-        assert self.pg_db.get_user(2) == (2, 'alexey', 'petrov', 'ivan_petrov', self.dt, dt_upd, True)
+        assert self.pg_db.get_user(2) == (2, 'alexey', 'petrov', 'ivan_petrov', self.time_info.create_time, self.dt, Decimal(self.time_info.create_time_unix), Decimal(123), True)
 
     def test_delete_user(self):
         self.pg_db.initialize_tables()
         self.pg_db.delete_user(2)
 
         all_users = [
-            (1, 'sergey', 'ivanov', 'sergey_ivanov', self.dt, self.dt, False),
-            (3, 'fedor', 'sidorov', 'fedor_sidorov', self.dt, self.dt, False)]
+            (1, 'sergey', 'ivanov', 'sergey_ivanov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False),
+            (3, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False)]
 
         assert self.pg_db.get_all_users() == all_users
 

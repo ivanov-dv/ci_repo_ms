@@ -1,6 +1,10 @@
 import datetime
 import logging
+import time
+
 import psycopg2
+
+from utils.models import TimeInfo
 
 
 class PostgresDB:
@@ -61,6 +65,8 @@ class PostgresDB:
                         username text,
                         date_registration timestamp DEFAULT (timezone('utc', NOW())),
                         date_update timestamp DEFAULT (timezone('utc', NOW())),
+                        time_registration_unix numeric,
+                        time_update_unix numeric,
                         ban boolean DEFAULT False,
                         PRIMARY KEY (user_id)
                     );
@@ -111,13 +117,15 @@ class PostgresDB:
             cur.execute(query)
             return cur.fetchall()
 
-    def add_user(self, user_id, firstname, surname, username, date_registration, date_update):
+    def add_user(self, user_id, firstname, surname, username, time_info: TimeInfo):
         with self.conn.cursor() as cur:
             query = '''
-                        INSERT INTO users (user_id, firstname, surname, username, date_registration, date_update)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO users (user_id, firstname, surname, username, date_registration, date_update,
+                            time_registration_unix, time_update_unix)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     '''
-            values = (user_id, firstname, surname, username, date_registration, date_update)
+            values = (user_id, firstname, surname, username, time_info.create_time, time_info.update_time,
+                      time_info.create_time_unix, time_info.update_time_unix)
             self._try_transaction(cur, query, values)
 
     def delete_user(self, user_id):
@@ -129,10 +137,11 @@ class PostgresDB:
             values = (user_id,)
             self._try_transaction(cur, query, values)
 
-    def update_user(self, user_id, firstname=None, surname=None, username=None, ban=None):
+    def update_user(self, user_id: int, date_update: datetime, time_update_unix: time,
+                    firstname=None, surname=None, username=None, ban=None):
         with self.conn.cursor() as cur:
-            fields = 'date_update = %s, '
-            values = [datetime.datetime.utcnow()]
+            fields = 'date_update = %s, time_update_unix = %s, '
+            values = [date_update, time_update_unix]
             if firstname:
                 fields += f'firstname = %s, '
                 values.append(firstname)
