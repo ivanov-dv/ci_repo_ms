@@ -27,13 +27,27 @@ redis_db = redis.Redis(
 class TestRequest:
     @staticmethod
     def test_comparison_request_server():
-        ex1 = RequestForServer(UserRequest(Symbol('BtcUsdT'), Price(70000.1), Way.down_to))
-        ex2 = RequestForServer(UserRequest(Symbol('BTCUSDT'), Price(60000.1), Way.up_to))
-        ex3 = RequestForServer(UserRequest(Symbol('BtcUsdT'), PercentOfPoint(23.5, 65000), Way.up_to))
-        ex4 = RequestForServer(UserRequest(Symbol('BTCUSDT'), PercentOfPoint(-3.5, 65000), Way.up_to))
-        ex5 = RequestForServer(UserRequest(Symbol('BTCUSDT'), PercentOfTime(-3.5, Period.v_24h), Way.up_to))
-        ex6 = RequestForServer(UserRequest(Symbol('BTCUSDT'), PercentOfTime(-3.5, Period.v_4h), Way.up_to))
-        ex7 = RequestForServer(UserRequest(Symbol('BTCUSDT'), PercentOfTime(-3.5, Period.v_4h), Way.up_to))
+        ex1 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BtcUsdT'), Price(70000.1), Way.down_to))
+        )
+        ex2 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), Price(60000.1), Way.up_to))
+        )
+        ex3 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BtcUsdT'), PercentOfPoint(23.5, 65000), Way.up_to))
+        )
+        ex4 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), PercentOfPoint(-3.5, 65000), Way.up_to))
+        )
+        ex5 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), PercentOfTime(-3.5, Period.v_24h), Way.up_to))
+        )
+        ex6 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), PercentOfTime(-3.5, Period.v_4h), Way.up_to))
+        )
+        ex7 = RequestForServer(
+            UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), PercentOfTime(-3.5, Period.v_4h), Way.up_to))
+        )
         assert ex1 == ex2
         assert ex3 == ex4
         assert ex1 == ex3
@@ -54,10 +68,10 @@ class TestRequest:
     @pytest.mark.parametrize(
         "ex1, ex2",
         [
-            (RequestForServer(UserRequest(Symbol('BTCUSDT'), Price(60000.1), Way.up_to)),
-             RequestForServer(UserRequest(Symbol('BTCUSD'), Price(60000.1), Way.up_to))),
-            (RequestForServer(UserRequest(Symbol('BTCUSDT'), PercentOfPoint(-3.5, 70000), Way.up_to)),
-             RequestForServer(UserRequest(Symbol('EThUSDT'), PercentOfPoint(-3.5, 70000), Way.up_to))),
+            (RequestForServer(UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), Price(60000.1), Way.up_to))),
+             RequestForServer(UniqueUserRequest(UserRequest(Symbol('BTCUSD'), Price(60000.1), Way.up_to)))),
+            (RequestForServer(UniqueUserRequest(UserRequest(Symbol('BTCUSDT'), PercentOfPoint(-3.5, 70000), Way.up_to))),
+             RequestForServer(UniqueUserRequest(UserRequest(Symbol('EThUSDT'), PercentOfPoint(-3.5, 70000), Way.up_to)))),
             (UserRequest(Symbol('BTcuSDt'), PercentOfTime(20.5, Period.v_24h), Way.up_to),
              UserRequest(Symbol('BTcuSDT'), PercentOfTime(20.5, Period.v_4h), Way.up_to))
         ]
@@ -225,4 +239,3 @@ class TestDB:
             (3, 'fedor', 'sidorov', 'fedor_sidorov', self.time_info.create_time, self.time_info.update_time, Decimal(self.time_info.create_time_unix), Decimal(self.time_info.update_time_unix), False)]
 
         assert self.pg_db.get_all_users() == all_users
-
