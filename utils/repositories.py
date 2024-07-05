@@ -15,8 +15,7 @@ class UserRepository(RepositoryDB, PatternSingleton):
             user.firstname,
             user.surname,
             user.username,
-            user.date_registration,
-            user.date_update
+            user.time_info
         )
         self.users[user.user_id] = user
 
@@ -36,8 +35,10 @@ class UserRepository(RepositoryDB, PatternSingleton):
 
     def update_user(self, user: User) -> None:
         if self.users.get(user.user_id, None):
-            self.postgres_db.update_user(user.user_id, firstname=user.firstname, surname=user.surname,
-                                         username=user.username, ban=user.ban)
+            self.postgres_db.update_user(
+                user.user_id, firstname=user.firstname, surname=user.surname,username=user.username,
+                ban=user.ban, date_update=dt.utcnow(), time_update_unix=time.time()
+            )
             self.users[user.user_id] = user
 
     def load_users_from_db(self) -> None:

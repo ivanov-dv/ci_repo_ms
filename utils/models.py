@@ -188,7 +188,7 @@ class RequestForServer(BaseModel):
     symbol: Symbol
     data_request: PercentOfTime | PercentOfPoint | Price
 
-    def __init__(self, user_request: UserRequest):
+    def __init__(self, user_request: UniqueUserRequest):
         super(RequestForServer, self).__init__(symbol=user_request.symbol, data_request=user_request.data_request)
 
     def __eq__(self, other):
