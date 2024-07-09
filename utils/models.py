@@ -52,7 +52,6 @@ class User(BaseModel):
         self.time_info = time_info
         self.ban = ban
 
-
     def __eq__(self, other):
         if isinstance(other, User):
             return self.user_id == other.user_id

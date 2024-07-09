@@ -19,10 +19,10 @@ class UserRepository(RepositoryDB, PatternSingleton):
         )
         self.users[user.user_id] = user
 
-    def delete_user(self, user: User) -> None:
-        if self.users.get(user.user_id, None):
-            self.postgres_db.delete_user(user.user_id)
-            self.users.pop(user.user_id)
+    def delete_user(self, user_id: int) -> None:
+        if self.users.get(user_id, None):
+            self.postgres_db.delete_user(user_id)
+            self.users.pop(user_id)
 
     def get_user(self, user_id: int) -> User:
         return self.users.get(user_id, None)
