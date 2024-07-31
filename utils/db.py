@@ -4,8 +4,6 @@ import time
 
 import psycopg2
 
-from utils.models import TimeInfo
-
 
 class PostgresDB:
     def __init__(self, dbname, user, password, host, port):
@@ -56,7 +54,7 @@ class PostgresDB:
     def initialize_tables(self):
         with self.conn.cursor() as cur:
             cur.execute(
-                f"""
+                """
                     CREATE TABLE IF NOT EXISTS users
                     (
                         user_id bigint,
@@ -70,7 +68,7 @@ class PostgresDB:
                         ban boolean DEFAULT False,
                         PRIMARY KEY (user_id)
                     );
-                    CREATE TABLE IF NOT EXISTS user_requests 
+                    CREATE TABLE IF NOT EXISTS user_requests
                     (
                         request_id bigint,
                         request_data bytea,
@@ -143,16 +141,16 @@ class PostgresDB:
             fields = 'date_update = %s, time_update_unix = %s, '
             values = [date_update, time_update_unix]
             if firstname:
-                fields += f'firstname = %s, '
+                fields += 'firstname = %s, '
                 values.append(firstname)
             if surname:
-                fields += f'surname = %s, '
+                fields += 'surname = %s, '
                 values.append(surname)
             if username:
-                fields += f'username = %s, '
+                fields += 'username = %s, '
                 values.append(username)
             if ban is not None:
-                fields += f'ban = %s, '
+                fields += 'ban = %s, '
                 values.append(ban)
             query = f'''
                         UPDATE users

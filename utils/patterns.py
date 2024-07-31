@@ -1,6 +1,6 @@
 import redis
 
-from utils.db import PostgresDB
+from sql.database import AlchemySqlDb
 
 
 class PatternSingleton:
@@ -13,6 +13,6 @@ class PatternSingleton:
 
 
 class RepositoryDB:
-    def __init__(self, redis_db: redis.Redis, postgres_db: PostgresDB):
+    def __init__(self, redis_db: redis.Redis, sql_db: AlchemySqlDb):
         self.redis_db = redis_db
-        self.postgres_db = postgres_db
+        self.sql_db = sql_db

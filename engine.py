@@ -1,43 +1,25 @@
 import redis
 from fastapi import FastAPI
+from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 
 import config as cfg
-from utils.db import PostgresDB
-from utils.repositories import RequestRepository, UserRepository
 
-postgres_db = PostgresDB(
-    dbname=cfg.POSTGRESQL_DB,
-    user=cfg.POSTGRESQL_USER,
-    password=cfg.POSTGRESQL_PASSWORD,
-    host=cfg.POSTGRESQL_HOST,
-    port=cfg.POSTGRESQL_PORT
-)
+from sql.database import AlchemySqlDb
+from sql.models import Base
+from utils.repositories import Repository
 
-redis_db = redis.Redis(
-    host=cfg.REDIS_HOST,
-    port=cfg.REDIS_HOST,
-    db=cfg.REDIS_DB
-)
+sql_db = AlchemySqlDb(cfg.SQLALCHEMY_DATABASE_URL, Base)
+redis_db = redis.Redis(host=cfg.REDIS_HOST, port=cfg.REDIS_HOST, db=cfg.REDIS_DB)
+repo = Repository(redis_db, sql_db)
 
-users_repo = UserRepository(redis_db, postgres_db)
-request_repo = RequestRepository(redis_db, postgres_db)
 app = FastAPI()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-'''
+"""
 PREPARING
-'''
-users_repo.load_users_from_db()
-request_repo.load_requests_from_db()
-
-
-# from utils.models import *
-# from pprint import pprint
-
-# request_repo.add(1, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))
-# request_repo.add(2, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))
-# request_repo.add(3, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))
-# request_repo.add(4, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.up_to))
-# request_repo.add(3, UserRequest(Symbol('BTCUSDT'), PercentOfTime(28, Period.v_24h), Way.down_to))
-# request_repo.add(4, UserRequest(Symbol('BTCUSDT'), Price(65000), Way.down_to))
-
-# postgres_db.add_user(123, 'denis', 'ivanov', 'ivanov_dv')
+"""
+repo.sql_db.prepare()
+repo.load_users_from_db()
+repo.load_requests_from_db()
