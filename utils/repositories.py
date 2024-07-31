@@ -101,7 +101,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
             if not self.unique_user_requests[UniqueUserRequest(request)]:
                 self.unique_user_requests.pop(UniqueUserRequest(request), None)
 
-    def _do_unique_requests_for_server(self) -> set[RequestForServer]:  # TODO: FIX
+    def _do_unique_requests_for_server(self) -> set[RequestForServer]:
         """
         Создает множество с уникальными запросами (без дублей) на API.
 
