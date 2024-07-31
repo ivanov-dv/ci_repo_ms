@@ -1,4 +1,3 @@
-import json
 import logging
 import sys
 
@@ -9,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 import config
 from engine import app, repo
 from utils.auth import create_access_token, create_refresh_token
-from utils.schemas import Token, User, UserRequest
+from utils.schemas import Token, User, UserRequest, UserRequestSchema
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger("MAIN")
@@ -54,7 +53,6 @@ async def delete_user(user_id: int):
         )
     try:
         repo.delete_user(user_id)
-        return
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Error delete user ID {user_id} - {e}"
@@ -86,7 +84,8 @@ async def get_all_requests_for_server():
 
 
 @app.post("/requests/")
-async def add_request(user_id: int, request: UserRequest):
+async def add_request(user_id: int, request: UserRequestSchema):
+    request = UserRequest(**request.dict())
     try:
         repo.add_request(user_id, request)
         return {user_id: request}
@@ -95,8 +94,8 @@ async def add_request(user_id: int, request: UserRequest):
 
 
 @app.get("/requests/{request_id}", response_model=UserRequest)
-async def get_request(request_id: UserRequest):
-    return repo.get_all_users_for_request(request_id)
+async def get_request(request_id: int):
+    return repo.get_unique_request(request_id)
 
 
 @app.delete("/requests/{request_id}")

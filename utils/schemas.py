@@ -195,6 +195,14 @@ class UserRequest(BaseModel):
         return UserRequest(**request_orm.__dict__)
 
 
+class UserRequestSchema(BaseModel):
+    symbol: str
+    request_data: PercentOfTime | PercentOfPoint | Price
+    way: Way
+    created: datetime.datetime
+    updated: datetime.datetime
+
+
 class UniqueUserRequest(BaseModel):
     request_id: int | None = None
     symbol: str | None = None
