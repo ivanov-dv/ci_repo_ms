@@ -197,16 +197,19 @@ class RequestRepository(RepositoryDB, PatternSingleton):
                 request_orm = (
                     session.query(UserRequestOrm)
                     .filter(
-                        UserRequestOrm.user == user_id,
+                        UserRequestOrm.user_id == user_id,
                         UserRequestOrm.request_id == request_id,
                     )
                     .first()
                 )
-                request = UserRequest.from_db(request_orm)
+                if request_orm:
+                    request = UserRequest.from_db(request_orm)
+                else:
+                    return None
             elif isinstance(request_id, UserRequest):
                 request = request_id
             else:
-                raise Exception("Invalid request_id")
+                raise Exception(f"Invalid request_id {request_id}")
         return request if user_id in self.user_requests and request in self.user_requests[user_id] else None
 
     def get_unique_request(self, request_id: int):

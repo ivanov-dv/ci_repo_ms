@@ -73,6 +73,11 @@ async def get_all_user_requests():
     return repo.get_all_requests()
 
 
+@app.get("/requests/user/{user_id}")
+async def get_request_for_user(user_id: int):
+    return repo.get_all_requests_for_user(user_id)
+
+
 @app.get("/requests/unique/")
 async def get_unique_requests():
     return repo.to_list_unique_user_requests()
@@ -83,7 +88,7 @@ async def get_all_requests_for_server():
     return repo.to_list_unique_requests_for_server()
 
 
-@app.post("/requests/")
+@app.post("/requests/", status_code=status.HTTP_201_CREATED)
 async def add_request(user_id: int, request: UserRequestSchema):
     request = UserRequest(**request.dict())
     try:
@@ -93,14 +98,23 @@ async def add_request(user_id: int, request: UserRequestSchema):
         raise HTTPException(status_code=400, detail=f'{e}')
 
 
+@app.delete("/requests/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_request_for_user(user_id: int, request_id: int):
+    if not repo.get_user_request(user_id, request_id):
+        raise HTTPException(
+            status_code=404, detail=f"Request ID {request_id} for user ID {user_id} not found"
+        )
+    try:
+        repo.delete_request(user_id, request_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Error delete request ID {request_id} for user ID {user_id} - {e}"
+        )
+
+
 @app.get("/requests/{request_id}", response_model=UserRequest)
 async def get_request(request_id: int):
     return repo.get_unique_request(request_id)
-
-
-@app.delete("/requests/{request_id}")
-async def delete_request_for_user(user_id: int, request_id: int):
-    repo.delete_request(user_id, request_id)
 
 
 @app.post("/token")
