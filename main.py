@@ -73,8 +73,13 @@ async def get_all_user_requests():
     return repo.get_all_requests()
 
 
-@app.get("/requests/user/{user_id}")
-async def get_request_for_user(user_id: int):
+@app.get("/users/requests/{request_id}")
+async def get_all_users_for_request(request_id: int):
+    return repo.get_all_requests_for_user(request_id)
+
+
+@app.get("/requests/users/{user_id}")
+async def get_all_requests_for_user(user_id: int):
     return repo.get_all_requests_for_user(user_id)
 
 

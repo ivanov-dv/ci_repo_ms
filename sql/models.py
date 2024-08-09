@@ -56,7 +56,7 @@ class UserRequestOrm(Base):
 
     def __repr__(self):
         return (
-            f"UserRequestOrm(request_id={self.request_id}, user_id={self.user}, "
+            f"UserRequestOrm(request_id={self.request_id}, user_id={self.user_id}, "
             f'symbol="{self.symbol}", request_data="{self.request_data}", way={self.way})'
         )
 

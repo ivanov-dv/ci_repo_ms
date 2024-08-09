@@ -23,3 +23,6 @@ PREPARING
 repo.sql_db.prepare()
 repo.load_users_from_db()
 repo.load_requests_from_db()
+
+if __name__ == '__main__':
+    repo.get_all_users_for_request(1723001500865169152)

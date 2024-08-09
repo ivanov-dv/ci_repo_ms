@@ -221,6 +221,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
                 )
                 .first()
             )
+            print(request_orm)
             request = UserRequest.from_db(request_orm)
         return request
 
@@ -238,7 +239,6 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         else:
             raise Exception("Invalid request_id")
         u_req = UniqueUserRequest(request)
-        print(self.unique_user_requests)
         return self.unique_user_requests[u_req] if u_req in self.unique_user_requests else None
 
     def get_all_requests(self):
