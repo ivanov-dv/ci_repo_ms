@@ -1,5 +1,3 @@
-import redis
-
 from sql.database import AlchemySqlDb
 
 
