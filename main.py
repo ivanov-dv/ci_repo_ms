@@ -16,12 +16,15 @@ logging.getLogger("MAIN")
 
 @app.on_event("startup")
 async def on_startup():
-    pass
+    # await repo.sql_db.clean()
+    await repo.sql_db.prepare()
+    await repo.load_users_from_db()
+    await repo.load_requests_from_db()
 
 
 @app.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: int):
-    user = repo.get_user(user_id)
+    user = await repo.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
     return user
@@ -29,7 +32,7 @@ async def get_user(user_id: int):
 
 @app.get("/users/")
 async def get_all_users():
-    return repo.get_all_users()
+    return await repo.get_all_users()
 
 
 @app.post("/users/", status_code=status.HTTP_201_CREATED, response_model=User)
@@ -39,7 +42,7 @@ async def add_user(user: User):
             status_code=422, detail=f"User {user.user_id} already exists"
         )
     try:
-        repo.add_user(user)
+        await repo.add_user(user)
         return user
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{add_user.__qualname__} - {e}")
@@ -47,12 +50,12 @@ async def add_user(user: User):
 
 @app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int):
-    if not repo.get_user(user_id):
+    if not await repo.get_user(user_id):
         raise HTTPException(
             status_code=404, detail=f"User ID {user_id} not found"
         )
     try:
-        repo.delete_user(user_id)
+        await repo.delete_user(user_id)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Error delete user ID {user_id} - {e}"
@@ -62,7 +65,7 @@ async def delete_user(user_id: int):
 @app.put("/users/{user_id}")
 async def update_user(user: User):
     try:
-        repo.update_user(user)
+        await repo.update_user(user)
         return user
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{update_user.__qualname__} - {e}")
@@ -70,34 +73,34 @@ async def update_user(user: User):
 
 @app.get("/requests/")
 async def get_all_user_requests():
-    return repo.get_all_requests()
+    return await repo.get_all_requests()
 
 
 @app.get("/users/requests/{request_id}")
 async def get_all_users_for_request(request_id: int):
-    return repo.get_all_requests_for_user(request_id)
+    return await repo.get_all_users_for_request(request_id)
 
 
 @app.get("/requests/users/{user_id}")
 async def get_all_requests_for_user(user_id: int):
-    return repo.get_all_requests_for_user(user_id)
+    return await repo.get_all_requests_for_user(user_id)
 
 
 @app.get("/requests/unique/")
 async def get_unique_requests():
-    return repo.to_list_unique_user_requests()
+    return await repo.to_list_unique_user_requests()
 
 
 @app.get("/requests/server/")
 async def get_all_requests_for_server():
-    return repo.to_list_unique_requests_for_server()
+    return await repo.to_list_unique_requests_for_server()
 
 
 @app.post("/requests/", status_code=status.HTTP_201_CREATED)
 async def add_request(user_id: int, request: UserRequestSchema):
     request = UserRequest(**request.dict())
     try:
-        repo.add_request(user_id, request)
+        await repo.add_request(user_id, request)
         return {user_id: request}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f'{e}')
@@ -105,12 +108,12 @@ async def add_request(user_id: int, request: UserRequestSchema):
 
 @app.delete("/requests/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_request_for_user(user_id: int, request_id: int):
-    if not repo.get_user_request(user_id, request_id):
+    if not await repo.get_user_request(user_id, request_id):
         raise HTTPException(
             status_code=404, detail=f"Request ID {request_id} for user ID {user_id} not found"
         )
     try:
-        repo.delete_request(user_id, request_id)
+        await repo.delete_request(user_id, request_id)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Error delete request ID {request_id} for user ID {user_id} - {e}"
@@ -119,7 +122,7 @@ async def delete_request_for_user(user_id: int, request_id: int):
 
 @app.get("/requests/{request_id}", response_model=UserRequest)
 async def get_request(request_id: int):
-    return repo.get_unique_request(request_id)
+    return await repo.get_unique_request(request_id)
 
 
 @app.post("/token")

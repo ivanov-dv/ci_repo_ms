@@ -1,13 +1,15 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, BigInteger
+from sqlalchemy import ForeignKey, BigInteger, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, relationship
 
 from utils.schemas import UserRequest, User
 
 
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {
+        datetime: TIMESTAMP
+    }
 
 
 class UserOrm(Base):
@@ -71,4 +73,3 @@ class UserRequestOrm(Base):
             created=request.created,
             updated=request.updated,
         )
-

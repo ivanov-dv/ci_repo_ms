@@ -22,7 +22,7 @@ from utils.schemas import (
 """
 CONFIG
 """
-test_sql = AlchemySqlDb(config.SQLALCHEMY_DATABASE_URL_TEST, Base)
+test_sql = AlchemySqlDb(config.SQLALCHEMY_DATABASE_URL_TEST, Base, test=True)
 redis_db = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_HOST, db=config.REDIS_DB)
 
 
@@ -188,8 +188,6 @@ class TestRequestRepository:
     repo = Repository(redis_db=redis_db, sql_db=test_sql)
     dt = datetime.datetime.utcnow()
 
-    repo.sql_db.clear()
-
     user_request1 = UserRequest.create(
         "btcusdt", PercentOfTime(target_percent=23, period=Period.v_24h), Way.up_to
     )
@@ -214,27 +212,30 @@ class TestRequestRepository:
     user_2 = User.create(2, "ivan", "petrov", "ivan_petrov")
     user_3 = User.create(3, "fedor", "sidorov", "fedor_sidorov")
 
-    def test_add(self):
+    @pytest.mark.asyncio
+    async def test_add(self):
+        await self.repo.sql_db.clean()
+
         user_orm_1 = UserOrm.from_user(self.user_1)
         user_orm_2 = UserOrm.from_user(self.user_2)
         user_orm_3 = UserOrm.from_user(self.user_3)
 
-        self.repo.add_user(user_orm_1)
-        self.repo.add_user(user_orm_2)
-        self.repo.add_user(user_orm_3)
+        await self.repo.add_user(user_orm_1)
+        await self.repo.add_user(user_orm_2)
+        await self.repo.add_user(user_orm_3)
 
         self.repo.user_requests = {}
         self.repo.unique_user_requests = {}
 
-        self.repo.add_request(1, self.user_request1)
-        self.repo.add_request(1, self.user_request2)
-        self.repo.add_request(1, self.user_request3)
-        self.repo.add_request(1, self.user_request4)
-        self.repo.add_request(1, self.user_request5)
-        self.repo.add_request(1, self.user_request6)
-        self.repo.add_request(2, self.user_request2)
-        self.repo.add_request(2, self.user_request4)
-        self.repo.add_request(2, self.user_request5)
+        await self.repo.add_request(1, self.user_request1)
+        await self.repo.add_request(1, self.user_request2)
+        await self.repo.add_request(1, self.user_request3)
+        await self.repo.add_request(1, self.user_request4)
+        await self.repo.add_request(1, self.user_request5)
+        await self.repo.add_request(1, self.user_request6)
+        await self.repo.add_request(2, self.user_request2)
+        await self.repo.add_request(2, self.user_request4)
+        await self.repo.add_request(2, self.user_request5)
 
         res_user_requests = {
             1: {
@@ -311,28 +312,26 @@ class TestRequestRepository:
                    r.request_id for sets in self.repo.user_requests.values() for r in sets
                } is not None
         assert (
-                self.repo.get_user_request(1, self.user_request1)
+                await self.repo.get_user_request(1, self.user_request1)
                 == self.user_request1
         )
-        assert self.repo.get_user_request(1, self.user_request7) is None
+        assert await self.repo.get_user_request(1, self.user_request7) is None
         assert (
-                self.repo.get_all_requests_for_user(2) == res_user_requests[2]
+                await self.repo.get_all_requests_for_user(2) == res_user_requests[2]
         )
-        assert (
-                self.repo.get_user_request(1, self.user_request2).request_id
-                == self.repo.get_user_request(2, self.user_request2).request_id
-        )
-        assert (
-                self.repo.get_user_request(2, self.user_request2).request_id
-                != self.repo.get_user_request(2, self.user_request4).request_id
-        )
+        a1 = await self.repo.get_user_request(1, self.user_request2)
+        a2 = await self.repo.get_user_request(2, self.user_request2)
+        assert (a1.request_id == a2.request_id)
+        a1 = await self.repo.get_user_request(2, self.user_request2)
+        a2 = await self.repo.get_user_request(2, self.user_request4)
+        assert (a1.request_id != a2.request_id)
 
-        self.repo.delete_request(1, self.user_request2)  # req2 = req1
-        self.repo.delete_request(1, self.user_request3)
-        self.repo.delete_request(1, self.user_request5)
-        self.repo.delete_request(2, self.user_request2)
-        self.repo.delete_request(2, self.user_request4)
-        self.repo.delete_request(2, self.user_request5)
+        await self.repo.delete_request(1, self.user_request2)  # req2 = req1
+        await self.repo.delete_request(1, self.user_request3)
+        await self.repo.delete_request(1, self.user_request5)
+        await self.repo.delete_request(2, self.user_request2)
+        await self.repo.delete_request(2, self.user_request4)
+        await self.repo.delete_request(2, self.user_request5)
 
         res_user_requests_delete = {1: {self.user_request4, self.user_request6}}
         res_unique_delete = {
@@ -351,29 +350,30 @@ class TestRequestRepository:
         assert self.repo.user_requests == res_user_requests_delete
         assert self.repo.unique_user_requests == res_unique_delete
 
-    def test_get(self):
-        assert (
-                self.repo.get_user_request(1, self.user_request4)
-                == self.user_request4
-        )
+    @pytest.mark.asyncio
+    async def test_get(self):
+        assert await self.repo.get_user_request(1, self.user_request4) == self.user_request4
 
-    def test_get_all_requests_for_user_id(self):
-        self.repo.add_request(1, self.user_request1)
-        assert len(self.repo.get_all_requests_for_user(1)) == 3
-        self.repo.delete_request(1, self.user_request1)
-        assert len(self.repo.get_all_requests_for_user(1)) == 2
+    @pytest.mark.asyncio
+    async def test_get_all_requests_for_user_id(self):
+        await self.repo.add_request(1, self.user_request1)
+        assert len(await self.repo.get_all_requests_for_user(1)) == 3
+        await self.repo.delete_request(1, self.user_request1)
+        assert len(await self.repo.get_all_requests_for_user(1)) == 2
 
-    def test_get_all_users_for_request(self):
-        assert self.repo.get_all_users_for_request(self.user_request4) == {1}
-        self.repo.add_request(2, self.user_request4)
-        self.repo.add_request(3, self.user_request4)
-        assert self.repo.get_all_users_for_request(self.user_request4) == {1, 2, 3}
-        self.repo.delete_request(2, self.user_request4)
-        assert self.repo.get_all_users_for_request(self.user_request4) == {1, 3}
+    @pytest.mark.asyncio
+    async def test_get_all_users_for_request(self):
+        assert await self.repo.get_all_users_for_request(self.user_request4) == {1}
+        await self.repo.add_request(2, self.user_request4)
+        await self.repo.add_request(3, self.user_request4)
+        assert await self.repo.get_all_users_for_request(self.user_request4) == {1, 2, 3}
+        await self.repo.delete_request(2, self.user_request4)
+        assert await self.repo.get_all_users_for_request(self.user_request4) == {1, 3}
 
-    def test_delete(self):
-        self.repo.delete_user(1)
-        self.repo.delete_user(2)
+    @pytest.mark.asyncio
+    async def test_delete(self):
+        await self.repo.delete_user(1)
+        await self.repo.delete_user(2)
         assert len(self.repo.unique_user_requests) == 1
         assert len(self.repo.user_requests) == 1
 
@@ -412,18 +412,21 @@ class TestUserRepository:
     user_orm_2 = UserOrm.from_user(user_2)
     user_orm_3 = UserOrm.from_user(user_3)
 
-    def test_prepare(self):
-        self.repo.sql_db.clear()
+    @pytest.mark.asyncio
+    async def test_prepare(self):
+        await self.repo.sql_db.clean()
 
-    def test_add(self):
-        self.repo.add_user(self.user_1)
-        self.repo.add_user(self.user_2)
-        self.repo.add_user(self.user_3)
-        self.repo.add_user(self.user_4)
+    @pytest.mark.asyncio
+    async def test_add(self):
+        await self.repo.add_user(self.user_1)
+        await self.repo.add_user(self.user_2)
+        await self.repo.add_user(self.user_3)
+        await self.repo.add_user(self.user_4)
 
-        u1 = self.repo.get_user(1)
+        u1 = await self.repo.get_user(1)
         u1_t = self.user_1
-        user_4 = User(**self.repo.get_user_from_db(4).__dict__)
+        u4 = await self.repo.get_user_from_db(4)
+        user_4 = User(**u4.__dict__)
         assert (
                    u1.user_id,
                    u1.firstname,
@@ -441,7 +444,7 @@ class TestUserRepository:
                    u1_t.created,
                    u1_t.updated,
                )
-        assert self.repo.get_user(2) == User(
+        assert await self.repo.get_user(2) == User(
             user_id=2,
             firstname="Egor",
             surname="Shkiv",
@@ -449,7 +452,7 @@ class TestUserRepository:
             created=self.dt,
             updated=self.dt,
         )
-        assert self.repo.get_user(3) == User(
+        assert await self.repo.get_user(3) == User(
             user_id=3,
             firstname="Andrey",
             surname="Kuper",
@@ -464,20 +467,23 @@ class TestUserRepository:
             4: user_4,
         }
 
-    def test_delete_user(self):
-        self.repo.delete_user(1)
-        self.repo.delete_user(4)
+    @pytest.mark.asyncio
+    async def test_delete_user(self):
+        await self.repo.delete_user(1)
+        await self.repo.delete_user(4)
 
         assert self.repo.users == {2: self.user_2, 3: self.user_3}
 
-    def test_update_user(self):
+    @pytest.mark.asyncio
+    async def test_update_user(self):
         user = self.user_2
         user.firstname = "Grisha"
         user.surname = "Fuskov"
         user.username = "123"
         user.ban = True
-        self.repo.update_user(user)
-        user_from_db = User(**self.repo.get_user_from_db(2).__dict__)
+        await self.repo.update_user(user)
+        u1 = await self.repo.get_user_from_db(2)
+        user_from_db = User(**u1.__dict__)
         assert (user.user_id, user.firstname, user.surname, user.username, user.ban, user.created) == (
             user_from_db.user_id,
             user_from_db.firstname,
@@ -486,4 +492,3 @@ class TestUserRepository:
             user_from_db.ban,
             user_from_db.created
         )
-

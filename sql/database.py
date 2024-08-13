@@ -1,20 +1,29 @@
-from sqlalchemy import create_engine, update
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 
 class AlchemySqlDb:
-    def __init__(self, sql_url, base: type[DeclarativeBase]):
+    def __init__(self, sql_url, base: type[DeclarativeBase], test: bool = False):
         self.metadata = base.metadata
-        self.engine = create_engine(sql_url, echo=False)
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        if test:
+            self.engine = create_async_engine(sql_url, poolclass=NullPool, echo=False)
+        else:
+            self.engine = create_async_engine(sql_url, echo=False)
+        self.SessionLocal = async_sessionmaker(
+            autocommit=False, autoflush=False, bind=self.engine, class_=AsyncSession, expire_on_commit=False
+        )
 
-    def prepare(self):
-        self.metadata.create_all(self.engine)
+    async def prepare(self):
+        async with self.engine.begin() as conn:
+            await conn.run_sync(self.metadata.create_all)
 
-    def clear(self):
-        self.metadata.drop_all(self.engine)
-        self.metadata.create_all(self.engine)
+    async def clean(self):
+        async with self.engine.begin() as conn:
+            await conn.run_sync(self.metadata.drop_all)
+            await conn.run_sync(self.metadata.create_all)
 
     @staticmethod
     def insert_query(model, values: dict, index_elements: list):
