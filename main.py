@@ -1,25 +1,18 @@
 import logging
 import sys
 
-from typing import Annotated
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+from typing import Annotated
 
 import config
+
 from engine import app, repo
 from utils.auth import create_access_token, create_refresh_token
 from utils.schemas import Token, User, UserRequest, UserRequestSchema
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 logging.getLogger("MAIN")
-
-
-@app.on_event("startup")
-async def on_startup():
-    # await repo.sql_db.clean()
-    await repo.sql_db.prepare()
-    await repo.load_users_from_db()
-    await repo.load_requests_from_db()
 
 
 @app.get("/users/{user_id}", response_model=User)

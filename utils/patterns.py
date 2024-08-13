@@ -13,7 +13,6 @@ class PatternSingleton:
 
 
 class RepositoryDB:
-    def __init__(self, redis_db: redis.Redis, sql_db: AlchemySqlDb):
-        self.redis_db = redis_db
+    def __init__(self, sql_db: AlchemySqlDb):
         self.sql_db = sql_db
 
