@@ -27,3 +27,4 @@ class AlchemySqlDb:
     @staticmethod
     def update_query(model, where_col, where_value, values):
         return update(model).values(values).where(where_col, where_value)
+

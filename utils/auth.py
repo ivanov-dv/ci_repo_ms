@@ -33,3 +33,4 @@ def create_refresh_token():
     )
     to_encode = {"type": "refresh", "exp": expire}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+

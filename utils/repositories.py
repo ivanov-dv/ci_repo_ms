@@ -283,3 +283,4 @@ class Repository(UserRepository, RequestRepository):
                     session.commit()
                     self.users.pop(user_id, None)
                 return f"User_id {user_id} deleted"
+

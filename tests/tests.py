@@ -486,3 +486,4 @@ class TestUserRepository:
             user_from_db.ban,
             user_from_db.created
         )
+

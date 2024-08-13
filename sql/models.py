@@ -71,3 +71,4 @@ class UserRequestOrm(Base):
             created=request.created,
             updated=request.updated,
         )
+

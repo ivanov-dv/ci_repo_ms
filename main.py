@@ -134,3 +134,4 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     refresh_token = create_refresh_token()
     token = Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
     return token
+

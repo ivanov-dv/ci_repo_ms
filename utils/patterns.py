@@ -16,3 +16,4 @@ class RepositoryDB:
     def __init__(self, redis_db: redis.Redis, sql_db: AlchemySqlDb):
         self.redis_db = redis_db
         self.sql_db = sql_db
+
