@@ -138,3 +138,7 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     token = Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
     return token
 
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8001)
