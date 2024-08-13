@@ -11,9 +11,6 @@ from engine import app, repo
 from utils.auth import create_access_token, create_refresh_token
 from utils.schemas import Token, User, UserRequest, UserRequestSchema
 
-logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
-logging.getLogger('MAIN')
-
 
 @app.get('/users/{user_id}', response_model=User)
 async def get_user(user_id: int):
@@ -29,6 +26,7 @@ async def get_user(user_id: int):
 
 @app.get('/users/')
 async def get_all_users():
+    logging.error('123')
     try:
         res = await repo.get_all_users()
         return res
@@ -174,4 +172,4 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    uvicorn.run(app, host="127.0.0.1", port=8001, log_level='error')
