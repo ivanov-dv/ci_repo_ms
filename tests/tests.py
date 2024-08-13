@@ -185,7 +185,7 @@ class TestRequest:
 
 
 class TestRequestRepository:
-    repo = Repository(redis_db=redis_db, sql_db=test_sql)
+    repo = Repository(sql_db=test_sql)
     dt = datetime.datetime.utcnow()
 
     user_request1 = UserRequest.create(
@@ -379,7 +379,7 @@ class TestRequestRepository:
 
 
 class TestUserRepository:
-    repo = Repository(redis_db=redis_db, sql_db=test_sql)
+    repo = Repository(sql_db=test_sql)
     dt = datetime.datetime.utcnow()
 
     user_1 = User(
