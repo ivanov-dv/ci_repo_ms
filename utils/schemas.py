@@ -4,7 +4,8 @@ import json
 import time
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
 
 import config
 
@@ -187,13 +188,9 @@ class UserRequest(BaseModel):
         return self.__repr__()
 
     @staticmethod
-    def create(
-            symbol: str, request_data: PercentOfTime | PercentOfPoint | Price, way: Way
-    ):
+    def create(symbol: str, request_data: PercentOfTime | PercentOfPoint | Price, way: Way):
         dt = datetime.datetime.utcnow()
-        return UserRequest(
-            symbol=symbol, request_data=request_data, way=way, created=dt, updated=dt
-        )
+        return UserRequest(symbol=symbol, request_data=request_data, way=way, created=dt, updated=dt)
 
     @staticmethod
     def from_db(request_orm):

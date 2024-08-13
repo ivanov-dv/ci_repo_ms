@@ -10,7 +10,7 @@ from utils.schemas import User, UserRequest, UniqueUserRequest, RequestForServer
 class UserRepository(RepositoryDB, PatternSingleton):
     users: dict[int, User] = {}
 
-    def add_user(self, user: User) -> User | str:
+    def add_user(self, user: User) -> User:
         with self.sql_db.SessionLocal() as session:
             user_orm = UserOrm.from_user(user)
             session.add(user_orm)
@@ -18,16 +18,16 @@ class UserRepository(RepositoryDB, PatternSingleton):
         self.users[user.user_id] = user
         return user
 
-    def delete_user(self, user_id: int) -> str:
+    def delete_user(self, user_id: int) -> User:
         pass
 
     def get_user(self, user_id: int) -> User | None:
         return self.users.get(user_id)
 
-    def get_all_users(self) -> dict[int, User]:
+    def get_all_users(self) -> dict:
         return self.users
 
-    def get_user_from_db(self, user_id) -> UserOrm | None:
+    def get_user_from_db(self, user_id: int) -> UserOrm:
         with self.sql_db.SessionLocal() as session:
             user_orm = session.query(UserOrm).filter(UserOrm.user_id == user_id).first()
             return user_orm
@@ -36,7 +36,7 @@ class UserRepository(RepositoryDB, PatternSingleton):
         with self.sql_db.SessionLocal() as session:
             return session.query(UserOrm).all()
 
-    def update_user(self, user: User) -> User | str:
+    def update_user(self, user: User) -> User:
         if not self.users.get(user.user_id, None):
             raise Exception(f"Ошибка обновления пользователя (пользователь с id {user.user_id} не существует)")
         with self.sql_db.SessionLocal() as session:
@@ -75,7 +75,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
     unique_requests_for_server: set[RequestForServer] = set()
     requests_weight: int = 0
 
-    def _add_request(self, user_id: int, request: UserRequest):
+    def _add_request(self, user_id: int, request: UserRequest) -> None:
         with self.sql_db.SessionLocal() as session:
             user_orm = session.query(UserOrm).filter(UserOrm.user_id == user_id).first()
             request_orm = UserRequestOrm.from_user_request(user_orm, request)
@@ -118,7 +118,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
 
         return self.unique_requests_for_server
 
-    def add_request(self, user_id: int, request: UserRequest) -> Self:
+    def add_request(self, user_id: int, request: UserRequest) -> UserRequest:
         """
         Добавляет запрос пользователя в репозиторий.
         Если запрос уникален, дополнительно добавляет его в список уникальных запросов.
@@ -130,30 +130,22 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         """
 
         if UniqueUserRequest(request) in self.unique_user_requests:
-            # if user_id in self.unique_user_requests[UniqueUserRequest(request)]:
-            #     raise Exception(f"Request {request.request_id} for user {user_id} already exists")
             self.unique_user_requests[UniqueUserRequest(request)].add(user_id)
-
             list_r = list(self.unique_user_requests.keys())
             i = list_r.index(UniqueUserRequest(request))
             request.request_id = list_r[i].request_id
-
             self._add_request(user_id, request)
-
         else:
             self._add_request(user_id, request)
-            self.unique_user_requests.update(
-                {UniqueUserRequest(request): {user_id}}
-            )
+            self.unique_user_requests.update({UniqueUserRequest(request): {user_id}})
 
         if user_id in self.user_requests:
             self.user_requests[user_id].add(request)
         else:
             self.user_requests.update({user_id: {request}})
+        return request
 
-        return self
-
-    def delete_request(self, user_id: int, request_id: int | UserRequest) -> Self:
+    def delete_request(self, user_id: int, request_id: int | UserRequest) -> UserRequest:
         """
         Удаляет запрос конкретного пользователя из репозитория и БД.
 
@@ -189,7 +181,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
             if not self.user_requests[user_id]:
                 self.user_requests.pop(user_id, None)
         self._delete_unique_user_request(user_id, request)
-        return self
+        return request
 
     def get_user_request(self, user_id: int, request_id: int | UserRequest) -> UserRequest | None:
         with self.sql_db.SessionLocal() as session:
@@ -212,7 +204,7 @@ class RequestRepository(RepositoryDB, PatternSingleton):
                 raise Exception(f"Invalid request_id {request_id}")
         return request if user_id in self.user_requests and request in self.user_requests[user_id] else None
 
-    def get_unique_request(self, request_id: int):
+    def get_unique_request(self, request_id: int) -> UserRequest:
         with self.sql_db.SessionLocal() as session:
             request_orm = (
                 session.query(UserRequestOrm)
@@ -225,8 +217,8 @@ class RequestRepository(RepositoryDB, PatternSingleton):
             request = UserRequest.from_db(request_orm)
         return request
 
-    def get_all_unique_requests(self):
-        return self.unique_user_requests.keys()
+    def get_all_unique_requests(self) -> list[UniqueUserRequest]:
+        return list(self.unique_user_requests.keys())
 
     def get_all_requests_for_user(self, user_id: int) -> set[UserRequest] | None:
         return self.user_requests[user_id] if user_id in self.user_requests else None
@@ -241,17 +233,17 @@ class RequestRepository(RepositoryDB, PatternSingleton):
         u_req = UniqueUserRequest(request)
         return self.unique_user_requests[u_req] if u_req in self.unique_user_requests else None
 
-    def get_all_requests(self):
+    def get_all_requests(self) -> dict:
         return self.user_requests
 
     def get_all_requests_from_db(self) -> list[UserRequestOrm]:
         with self.sql_db.SessionLocal() as session:
             return session.query(UserRequestOrm).all()
 
-    def to_list_unique_user_requests(self) -> list:
+    def to_list_unique_user_requests(self) -> list[UniqueUserRequest]:
         return [req for req in self.unique_user_requests]
 
-    def to_list_unique_requests_for_server(self) -> list:
+    def to_list_unique_requests_for_server(self) -> list[RequestForServer]:
         self._do_unique_requests_for_server()
         res = [req for req in self.unique_requests_for_server]
         return res
