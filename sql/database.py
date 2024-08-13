@@ -7,9 +7,7 @@ class AlchemySqlDb:
     def __init__(self, sql_url, base: type[DeclarativeBase]):
         self.metadata = base.metadata
         self.engine = create_engine(sql_url, echo=False)
-        self.SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
-        )
+        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
     def prepare(self):
         self.metadata.create_all(self.engine)

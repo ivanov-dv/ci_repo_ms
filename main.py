@@ -123,13 +123,8 @@ async def get_request(request_id: int):
 
 
 @app.post("/token")
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> Token:
-    if not (
-        form_data.username == config.AUTH_TOKEN
-        and form_data.password == config.AUTH_TOKEN
-    ):
+async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+    if not (form_data.username == config.AUTH_TOKEN and form_data.password == config.AUTH_TOKEN):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -137,7 +132,5 @@ async def login_for_access_token(
         )
     access_token = create_access_token()
     refresh_token = create_refresh_token()
-    res = Token(
-        access_token=access_token, refresh_token=refresh_token, token_type="bearer"
-    )
-    return res
+    token = Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+    return token
