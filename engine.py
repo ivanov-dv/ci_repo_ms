@@ -16,6 +16,7 @@ repo = Repository(sql_db)
 
 logger = logging.getLogger('uvicorn.error')
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info('Prepare database')
