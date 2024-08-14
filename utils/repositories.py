@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from datetime import datetime
 from sqlalchemy import update, select
 
@@ -279,4 +278,3 @@ class Repository(UserRepository, RequestRepository):
                     return User(**user.__dict__)
                 else:
                     raise Exception(f"Ошибка удаления пользователя с id {user_id})")
-
