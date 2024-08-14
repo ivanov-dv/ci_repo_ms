@@ -172,13 +172,13 @@ class RequestRepository(RepositoryDB, PatternSingleton):
                 )
                 request_orm = res.scalar_one_or_none()
             else:
-                raise Exception("Invalid request_id")
+                raise Exception("delete_request: Invalid request_id")
             await session.delete(request_orm)
             await session.commit()
-            request = UserRequest.from_db(request_orm)
-            self.user_requests[user_id].discard(request)
-            if not self.user_requests[user_id]:
-                self.user_requests.pop(user_id, None)
+        request = UserRequest.from_db(request_orm)
+        self.user_requests[user_id].discard(request)
+        if not self.user_requests[user_id]:
+            self.user_requests.pop(user_id, None)
         await self._delete_unique_user_request(user_id, request)
         return request
 

@@ -121,12 +121,12 @@ async def get_unique_requests():
 
 
 @app.get('/requests/server/')
-async def get_all_requests_for_server():
+async def get_requests_for_server():
     try:
         return await repo.to_list_unique_requests_for_server()
     except Exception as e:
         logging.error(f'get_all_requests_for_server error: {e}')
-        raise HTTPException(status_code=500, detail=f'get_all_requests_for_server error: {e}')
+        raise HTTPException(status_code=500, detail=f'get_requests_for_server error: {e}')
 
 
 @app.post('/requests/', status_code=status.HTTP_201_CREATED)
