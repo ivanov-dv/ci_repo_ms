@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ci-repo-ms
+  name: ci-repo-ms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ci-repo-ms
+  template:
+    metadata:
+      labels:
+        app: ci-repo-ms
+    spec:
+      containers:
+        - name: ci-repo-ms
+          image: ivanovdv/ci-repo-ms:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: ci-repo-ms-env
