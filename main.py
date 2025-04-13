@@ -1,11 +1,14 @@
 import logging
 import sys
 
+import sentry_sdk
+import uvicorn
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
 
 import config
+from config import SENTRY_DSN
 
 from engine import app, repo
 from utils.auth import create_access_token, create_refresh_token
@@ -170,5 +173,6 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
 
 
 if __name__ == "__main__":
-    import uvicorn
+    if SENTRY_DSN:
+        sentry_sdk.init(SENTRY_DSN)
     uvicorn.run(app, host="0.0.0.0", port=8001, log_level='info')
